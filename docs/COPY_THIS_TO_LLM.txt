@@ -1,0 +1,13 @@
+이 저장소의 INSTALL_FOR_LLM.md와 INSTALL_MANIFEST.json을 먼저 끝까지 읽고 설치해줘.
+
+내 ComfyUI 위치와 그 ComfyUI가 실제로 사용하는 Python을 찾아라. 이 저장소를 ComfyUI/custom_nodes/ComfyUI-Flagship-Melona-Pack에 설치해라.
+
+설치 전에 이전 분리형 폴더인 ComfyUI-H3-Workflow-Tools, ComfyUI-H3-Audio-Cleanup, comfyui_lut_video_exporter가 있는지 검사해라. 새 통합팩과 노드 ID가 중복되므로 동시에 활성화하지 마라. 기존 폴더가 있으면 바로 삭제하지 말고 백업 또는 비활성화 방법과 정확한 대상을 나에게 보여주고 승인을 받아라.
+
+기존 설치 폴더를 무조건 덮어쓰지 말고 Git 원격, 버전, 로컬 변경을 검사해라. 종속성 설치 전 requirements와 pyproject를 검사하고 현재 ComfyUI Python에서 torch, torchaudio, kornia, ultralytics가 import되는지 먼저 확인해라.
+
+기존 torch, torchvision, torchaudio, triton, CUDA 패키지, numpy, onnxruntime을 임의로 업그레이드·다운그레이드하지 마라. 충돌 가능성이 있으면 중단하고 나에게 알려라.
+
+face_yolov8m.pt가 없을 때만 manifest의 공식 주소에서 ComfyUI/models/ultralytics/bbox에 내려받아라.
+
+설치 후 verify_install.py를 ComfyUI Python으로 실행하고 검사 결과를 보여줘. 사용자 이미지, 음원, LUT와 대용량 H3 모델은 임의로 다운로드하거나 대체하지 마라. 이 저장소에는 예제 워크플로가 없다. 마지막에 ComfyUI 완전 재시작을 안내해라.

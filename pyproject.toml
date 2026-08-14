@@ -1,0 +1,12 @@
+[project]
+name = "comfyui-flagship-melona-pack"
+version = "1.0.0"
+description = "Private community node pack for the Flagship Melona MiniMax H3 workflow."
+requires-python = ">=3.10"
+license = { file = "LICENSE" }
+readme = "README.md"
+dependencies = []
+
+[project.urls]
+Repository = "https://github.com/ych8836-ops/flagship-melona-pack"
+

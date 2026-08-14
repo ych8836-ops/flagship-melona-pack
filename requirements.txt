@@ -1,0 +1,3 @@
+# This node pack does not modify the user's Torch/CUDA stack automatically.
+# Runtime modules used by individual nodes: torch, torchaudio, kornia, ultralytics.
+# Check the active ComfyUI Python environment before installing anything.

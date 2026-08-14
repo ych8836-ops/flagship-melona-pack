@@ -1,0 +1,47 @@
+{
+  "pack_name": "Flagship Melona Pack",
+  "pack_version": "1.0.0",
+  "minimum_comfyui_version": "0.32.0",
+  "bundled_custom_node_folder": "ComfyUI-Flagship-Melona-Pack",
+  "legacy_conflicting_folders": [
+    "ComfyUI-H3-Workflow-Tools",
+    "ComfyUI-H3-Audio-Cleanup",
+    "comfyui_lut_video_exporter"
+  ],
+  "bundled_node_ids": [
+    "H3FacePresence",
+    "ColorMatchLABChunked",
+    "H3DynamicResonanceSuppressor",
+    "ApplyLUTToVideoFrames",
+    "LUTVideoSave"
+  ],
+  "optional_integrations": [
+    {
+      "name": "ComfyUI-H3-FaceRefine",
+      "url": "https://github.com/Carasibana/ComfyUI-H3-FaceRefine.git",
+      "purpose": "Use H3FacePresence to bypass FaceRefine when no face is detected"
+    },
+    {
+      "name": "ComfyUI-KJNodes",
+      "url": "https://github.com/kijai/ComfyUI-KJNodes.git",
+      "purpose": "Lazy Switch routing for face/no-face branches"
+    }
+  ],
+  "required_models": [
+    {
+      "name": "face_yolov8m.pt",
+      "url": "https://huggingface.co/Bingsu/adetailer/resolve/main/face_yolov8m.pt",
+      "target": "ComfyUI/models/ultralytics/bbox/face_yolov8m.pt"
+    }
+  ],
+  "do_not_change_without_approval": [
+    "torch",
+    "torchvision",
+    "torchaudio",
+    "triton",
+    "CUDA runtime packages",
+    "numpy",
+    "onnxruntime",
+    "onnxruntime-gpu"
+  ]
+}
