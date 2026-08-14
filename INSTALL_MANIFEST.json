@@ -1,6 +1,6 @@
 {
   "pack_name": "Flagship Melona Pack",
-  "pack_version": "1.0.0",
+  "pack_version": "1.0.1",
   "minimum_comfyui_version": "0.32.0",
   "bundled_custom_node_folder": "ComfyUI-Flagship-Melona-Pack",
   "legacy_conflicting_folders": [
@@ -45,3 +45,4 @@
     "onnxruntime-gpu"
   ]
 }
+

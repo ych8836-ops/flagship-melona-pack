@@ -1,6 +1,6 @@
 [project]
 name = "comfyui-flagship-melona-pack"
-version = "1.0.0"
+version = "1.0.1"
 description = "ComfyUI custom nodes for MiniMax H3 face routing, color matching, audio cleanup, and LUT output."
 requires-python = ">=3.10"
 license = { file = "LICENSE" }

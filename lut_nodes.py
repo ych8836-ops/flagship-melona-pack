@@ -93,73 +93,258 @@ def _output_paths(filename_prefix: str, extension: str, save_output: bool) -> Tu
         return base_dir, os.path.join(base_dir, f"{safe_prefix}_00001{extension}")
 
     output_dir = folder_paths.get_output_directory() if save_output else folder_paths.get_temp_directory()
-    full_folder, filename, cou…4434 tokens truncated…아래 모듈이 없는 경우 ComfyUI가 실제로 사용하는 Python에서 누락된 것만 설치하세요.
+    full_folder, filename, counter, _, _ = folder_paths.get_save_image_path(filename_prefix or "LUTVideo", output_dir)
+    os.makedirs(full_folder, exist_ok=True)
+    path = os.path.join(full_folder, f"{filename}_{counter:05d}{extension}")
+    while os.path.exists(path):
+        counter += 1
+        path = os.path.join(full_folder, f"{filename}_{counter:05d}{extension}")
+    return full_folder, path
 
-- `H3FacePresence`: `ultralytics`
-- `ColorMatchLABChunked`: `torch`, `kornia`
-- `H3DynamicResonanceSuppressor`: `torch`, `torchaudio`
-- LUT 노드: `torch`; 영상 저장 기능은 FFmpeg 필요
 
-## 선택형 연동 노드
+def _codec_args(codec: str, quality: int) -> Tuple[str, str, list]:
+    if codec == "h264_high":
+        return ".mp4", "h264", ["-c:v", "libx264", "-preset", "medium", "-crf", str(quality), "-pix_fmt", "yuv420p", "-movflags", "+faststart"]
+    if codec == "h264_lossless":
+        return ".mkv", "h264_lossless", ["-c:v", "libx264rgb", "-preset", "medium", "-qp", "0", "-pix_fmt", "rgb24"]
+    if codec == "prores_4444":
+        return ".mov", "prores_4444", ["-c:v", "prores_ks", "-profile:v", "4444", "-pix_fmt", "yuv444p10le"]
+    if codec == "ffv1_lossless":
+        return ".mkv", "ffv1_lossless", ["-c:v", "ffv1", "-level", "3", "-coder", "1", "-context", "1", "-g", "1", "-pix_fmt", "rgb24"]
+    raise ValueError(f"지원하지 않는 코덱: {codec}")
 
-`H3FacePresence`를 FaceRefine 자동 우회용으로 쓸 때는 [ComfyUI-H3-FaceRefine](https://github.com/Carasibana/ComfyUI-H3-FaceRefine)과 Boolean에 따라 실제 실행 경로를 늦게 선택하는 Lazy Switch 노드가 필요할 수 있습니다. 이들은 Melona Pack의 필수 종속성이 아니며 자동 설치하지 않습니다.
 
-설치 도우미가 읽을 수 있는 최소 구성 정보는 [`INSTALL_MANIFEST.json`](INSTALL_MANIFEST.json)에 정리되어 있습니다.
+def _preview_format(codec: str) -> str:
+    return {
+        "h264_high": "video/h264-mp4",
+        "h264_lossless": "video/h264-mkv",
+        "prores_4444": "video/prores-mov",
+        "ffv1_lossless": "video/ffv1-mkv",
+    }.get(codec, "video/mp4")
 
-## 얼굴 검출 모델
 
-얼굴 검출 모델:
+def _preview_payload(path: str, save_output: bool, frame_rate: float, codec: str) -> dict:
+    if folder_paths is None:
+        base_dir = os.path.dirname(path)
+    else:
+        base_dir = folder_paths.get_output_directory() if save_output else folder_paths.get_temp_directory()
+    subfolder = os.path.relpath(os.path.dirname(path), base_dir).replace("\\", "/")
+    if subfolder == ".":
+        subfolder = ""
+    return {
+        "filename": os.path.basename(path),
+        "subfolder": subfolder,
+        "type": "output" if save_output else "temp",
+        "format": _preview_format(codec),
+        "frame_rate": float(frame_rate),
+        "fullpath": path,
+    }
 
-```text
-ComfyUI/models/ultralytics/bbox/face_yolov8m.pt
-```
 
-다운로드: [Bingsu/adetailer — face_yolov8m.pt](https://huggingface.co/Bingsu/adetailer/blob/main/face_yolov8m.pt)
+def _audio_wave_path(audio: Dict, directory: str) -> Optional[str]:
+    if not isinstance(audio, dict) or "waveform" not in audio or "sample_rate" not in audio:
+        return None
+    waveform = audio["waveform"]
+    if not isinstance(waveform, torch.Tensor) or waveform.numel() == 0:
+        return None
+    if waveform.ndim == 2:
+        waveform = waveform.unsqueeze(0)
+    channels = int(waveform.shape[1])
+    samples = waveform.squeeze(0).transpose(0, 1).contiguous().detach().cpu().float()
+    path = os.path.join(directory, "lut_audio_" + next(tempfile._get_candidate_names()) + ".wav")
+    with wave.open(path, "wb") as handle:
+        handle.setnchannels(channels)
+        handle.setsampwidth(4)
+        handle.setframerate(int(audio["sample_rate"]))
+        handle.writeframes(samples.numpy().tobytes())
+    return path
 
-다른 H3 모델과 입력 파일은 이 저장소에서 다운로드하거나 재배포하지 않습니다.
 
-## 설치 검증
+class LUTVideoSave:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "images": ("IMAGE",),
+                "lut_file": (_lut_choices(), {
+                    "tooltip": "ComfyUI/models/luts에 넣은 Premiere/CapCut 호환 .cube LUT를 선택하세요.",
+                }),
+                "frame_rate": ("FLOAT", {"default": 24.0, "min": 1.0, "max": 240.0, "step": 0.01}),
+                "filename_prefix": ("STRING", {"default": "LUTVideo"}),
+                "codec": (["h264_high", "h264_lossless", "prores_4444", "ffv1_lossless"], {"default": "h264_high"}),
+                "quality": ("INT", {"default": 14, "min": 0, "max": 51, "step": 1, "tooltip": "H.264 고화질 모드의 CRF입니다. 낮을수록 고화질입니다."}),
+                "lut_strength": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.01}),
+                "frame_chunk": ("INT", {"default": 4, "min": 1, "max": 64, "step": 1}),
+                "save_output": ("BOOLEAN", {"default": True}),
+            },
+            "optional": {
+                "audio": ("AUDIO",),
+            },
+        }
 
-저장소가 `ComfyUI/custom_nodes/ComfyUI-Flagship-Melona-Pack`에 설치된 상태에서 ComfyUI가 사용하는 Python으로 실행합니다.
+    RETURN_TYPES = ("STRING",)
+    RETURN_NAMES = ("video_path",)
+    FUNCTION = "save_video"
+    OUTPUT_NODE = True
+    CATEGORY = "Flagship Melona/LUT"
 
-```bash
-python verify_install.py --comfy-root /path/to/ComfyUI
-```
+    def save_video(
+        self,
+        images,
+        lut_file,
+        frame_rate,
+        filename_prefix,
+        codec,
+        quality,
+        lut_strength,
+        frame_chunk,
+        save_output,
+        audio=None,
+    ):
+        if not isinstance(images, torch.Tensor) or images.ndim != 4:
+            raise ValueError("images는 [frames, height, width, channels] 형태의 IMAGE 배치여야 합니다.")
+        if images.shape[-1] not in (3, 4):
+            raise ValueError("RGB 또는 RGBA 이미지 입력만 지원합니다.")
+        if len(images) == 0:
+            raise ValueError("저장할 영상 프레임이 없습니다.")
 
-Windows Portable 예시:
+        lut_path = _resolve_lut_path(lut_file)
+        lut: Optional[CubeLUT] = load_cube(lut_path) if float(lut_strength) < 0.999999 else None
+        ffmpeg = _find_ffmpeg()
+        extension, _codec_name, codec_args = _codec_args(codec, int(quality))
+        _folder, final_path = _output_paths(filename_prefix, extension, bool(save_output))
+        temp_video = final_path
+        temp_audio = None
+        temp_dir = folder_paths.get_temp_directory() if folder_paths is not None else tempfile.gettempdir()
+        if audio is not None:
+            temp_video = os.path.join(temp_dir, Path(final_path).stem + ".video" + extension)
+            temp_audio = _audio_wave_path(audio, temp_dir)
 
-```powershell
-E:\ComfyUI_portable\python_embeded\python.exe verify_install.py --comfy-root E:\ComfyUI_portable\ComfyUI
-```
+        height, width = int(images.shape[1]), int(images.shape[2])
+        channels = int(images.shape[3])
+        pixel_format = "rgba" if channels == 4 else "rgb24"
+        input_format = "rgba" if channels == 4 else "rgb24"
+        lut_filter = None
+        if lut is None:
+            escaped_lut_path = lut_path.replace("\\", "/").replace(":", "\\:")
+            lut_filter = f"lut3d=file='{escaped_lut_path}':interp=trilinear"
+        args = [
+            ffmpeg, "-hide_banner", "-loglevel", "error", "-y",
+            "-f", "rawvideo", "-pix_fmt", input_format,
+            "-s", f"{width}x{height}", "-r", str(float(frame_rate)), "-i", "-",
+            "-an", "-color_range", "pc", "-colorspace", "bt709",
+            "-color_primaries", "bt709", "-color_trc", "bt709",
+        ] + codec_args + ["-r", str(float(frame_rate)), temp_video]
+        if lut_filter is not None:
+            args[args.index("-an") + 1:args.index("-an") + 1] = ["-vf", lut_filter]
+        del pixel_format
 
-검증기는 다섯 Melona 노드, FaceRefine, NativeAudioLock, 이전 분리형 폴더 충돌과 얼굴 검출 모델을 확인합니다.
+        process = subprocess.Popen(args, stdin=subprocess.PIPE, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+        try:
+            for start in range(0, int(images.shape[0]), max(1, int(frame_chunk))):
+                chunk = images[start:start + int(frame_chunk)]
+                rgb = chunk[..., :3]
+                if lut is None:
+                    graded = rgb.to(dtype=torch.float32)
+                else:
+                    graded = lut.apply(rgb)
+                if lut is not None and lut_strength < 1.0:
+                    graded = torch.lerp(rgb.to(dtype=torch.float32), graded, float(lut_strength))
+                if channels == 4:
+                    graded = torch.cat((graded, chunk[..., 3:4].to(dtype=torch.float32).clamp(0.0, 1.0)), dim=-1)
+                data = (graded.clamp(0.0, 1.0) * 255.0).round().to(torch.uint8).cpu().contiguous().numpy().tobytes()
+                process.stdin.write(data)
+            process.stdin.close()
+            stderr = process.stderr.read().decode("utf-8", errors="replace")
+            return_code = process.wait()
+        except Exception:
+            if process.stdin:
+                process.stdin.close()
+            process.kill()
+            process.wait()
+            raise
+        if return_code != 0:
+            raise RuntimeError(f"FFmpeg 영상 인코딩 실패:\n{stderr}")
 
-## 문제 해결
+        if temp_audio is not None:
+            mux_args = [
+                ffmpeg, "-hide_banner", "-loglevel", "error", "-y",
+                "-i", temp_video, "-i", temp_audio,
+                "-map", "0:v:0", "-map", "1:a:0", "-c:v", "copy",
+                "-c:a", "aac", "-b:a", "192k", "-shortest", final_path,
+            ]
+            mux = subprocess.run(mux_args, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, check=False)
+            if mux.returncode != 0:
+                raise RuntimeError("FFmpeg 오디오 결합 실패:\n" + mux.stderr.decode("utf-8", errors="replace"))
+            for path in (temp_video, temp_audio):
+                try:
+                    os.remove(path)
+                except OSError:
+                    pass
 
-### 긴 영상 최종 색상 보정에서 OOM
+        preview = _preview_payload(final_path, bool(save_output), float(frame_rate), codec)
+        preview.update({
+            "width": width,
+            "height": height,
+            "frame_count": int(images.shape[0]),
+            "has_audio": temp_audio is not None,
+        })
+        return {
+            "ui": {
+                "gifs": [preview],
+                "lut_video_preview": [preview],
+            },
+            "result": (final_path,),
+        }
 
-- `chunk_size=2` 사용
-- 여전히 부족하면 `chunk_size=1`
-- `free_vram_first=true` 유지
 
-단순 VRAM Clean만으로는 전체 영상 배치가 다시 GPU에 올라가는 문제를 해결하지 못합니다.
+class ApplyLUTToVideoFrames:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "images": ("IMAGE",),
+                "lut_file": (_lut_choices(), {
+                    "tooltip": "ComfyUI/models/luts에 넣은 Premiere/CapCut 호환 .cube LUT를 선택하세요.",
+                }),
+                "lut_strength": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.01}),
+                "frame_chunk": ("INT", {"default": 4, "min": 1, "max": 64, "step": 1}),
+            },
+        }
 
-### 얼굴이 없는 장면에서 FaceRefine 중단
+    RETURN_TYPES = ("IMAGE",)
+    RETURN_NAMES = ("images",)
+    FUNCTION = "apply_lut"
+    CATEGORY = "Flagship Melona/LUT"
 
-`H3FacePresence`의 Boolean 출력을 `LazySwitchKJ`에 연결합니다. `false` 입력에는 원본 프레임, `true` 입력에는 FaceRefine 합성 결과를 연결합니다.
+    def apply_lut(self, images, lut_file, lut_strength, frame_chunk):
+        if not isinstance(images, torch.Tensor) or images.ndim != 4:
+            raise ValueError("images는 [frames, height, width, channels] 형태의 IMAGE 배치여야 합니다.")
+        if images.shape[-1] not in (3, 4):
+            raise ValueError("RGB 또는 RGBA 이미지 입력만 지원합니다.")
+        lut = load_cube(_resolve_lut_path(lut_file))
+        output = torch.empty_like(images, dtype=torch.float32)
+        chunk_size = max(1, int(frame_chunk))
+        for start in range(0, int(images.shape[0]), chunk_size):
+            chunk = images[start:start + chunk_size]
+            rgb = chunk[..., :3].to(dtype=torch.float32)
+            graded = lut.apply(rgb)
+            graded = torch.lerp(rgb, graded, float(lut_strength))
+            if images.shape[-1] == 4:
+                graded = torch.cat((graded, chunk[..., 3:4].to(dtype=torch.float32).clamp(0.0, 1.0)), dim=-1)
+            output[start:start + chunk.shape[0]] = graded
+        return (output.clamp(0.0, 1.0),)
 
-### InsightFace CUDA provider 경고
 
-H3와 YOLO가 사용하는 PyTorch CUDA와 InsightFace의 ONNX Runtime CUDA 버전은 별개입니다. `onnxruntime`과 `onnxruntime-gpu`를 무작정 함께 설치하거나 Torch를 변경하지 마세요. 신원 비교가 CPU로 fallback되어도 H3 생성과 YOLO 검출은 계속 GPU에서 실행될 수 있습니다.
+_register_lut_folder()
 
-### LUT가 목록에 없음
+NODE_CLASS_MAPPINGS = {
+    "LUTVideoSave": LUTVideoSave,
+    "ApplyLUTToVideoFrames": ApplyLUTToVideoFrames,
+}
 
-`.cube` 파일을 `ComfyUI/models/luts/`에 넣고 ComfyUI를 재시작하세요.
+NODE_DISPLAY_NAME_MAPPINGS = {
+    "LUTVideoSave": "Save Video with LUT",
+    "ApplyLUTToVideoFrames": "Apply LUT to Video Frames",
+}
 
-## 보안
-
-커스텀 노드는 ComfyUI 프로세스 권한으로 실행됩니다. 설치 전 코드를 검토하고, 타사 노드는 README에 적힌 공식 저장소 주소를 사용하세요. 이 팩은 시작 시 네트워크 다운로드나 pip 설치를 자동으로 실행하지 않습니다.
-
-## 라이선스
-
-Flagship Melona Pack 자체 코드는 [MIT License](LICENSE)로 배포됩니다. 외부 프로젝트와 모델은 각각의 라이선스와 이용 조건을 따릅니다.
