@@ -164,7 +164,7 @@ Windows Portable 예시:
 E:\ComfyUI_portable\python_embeded\python.exe verify_install.py --comfy-root E:\ComfyUI_portable\ComfyUI
 ```
 
-검증기는 다섯 Melona 노드, FaceRefine, NativeAudioLock, 이전 분리형 폴더 충돌과 얼굴 검출 모델을 확인합니다.
+검증기는 다섯 Melona 노드, 이전 분리형 폴더 충돌과 얼굴 검출 모델을 확인합니다. FaceRefine 같은 선택형 외부 노드는 검사 대상이 아닙니다.
 
 ## 문제 해결
 
