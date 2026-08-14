@@ -1,7 +1,7 @@
 [project]
 name = "comfyui-flagship-melona-pack"
 version = "1.0.0"
-description = "Private community node pack for the Flagship Melona MiniMax H3 workflow."
+description = "ComfyUI custom nodes for MiniMax H3 face routing, color matching, audio cleanup, and LUT output."
 requires-python = ">=3.10"
 license = { file = "LICENSE" }
 readme = "README.md"
