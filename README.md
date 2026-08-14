@@ -195,5 +195,4 @@ H3와 YOLO가 사용하는 PyTorch CUDA와 InsightFace의 ONNX Runtime CUDA 버�
 
 ## 라이선스
 
-Flagship Melona Pack 자체 코드는 [MIT License](LICENSE)로 배포됩니다. 외부 프로젝트와 모델은 각각의 라이선스와 이용 조건을 따릅니다.
-
+Flagship Melona Pack 자체 코드는 [Apache License 2.0](LICENSE)으로 배포됩니다. 외부 프로젝트와 모델은 각각의 라이선스와 이용 조건을 따릅니다.
