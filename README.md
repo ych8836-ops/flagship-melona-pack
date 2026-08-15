@@ -97,7 +97,7 @@ LLM 지침은 다음을 요구합니다.
 - 기존 Torch·CUDA·ONNX Runtime 보호
 - 이전 분리형 노드팩 충돌 검사
 - 누락된 실행 패키지만 확인하고 기존 Torch·CUDA 환경은 변경하지 않기
-- 설치 후 다섯 노드와 얼굴 검출 모델 검증
+- 설치 후 네 노드와 얼굴 검출 모델 검증
 
 ## 이전 분리형 팩에서 이전
 
@@ -152,7 +152,7 @@ Windows Portable 예시:
 E:\ComfyUI_portable\python_embeded\python.exe verify_install.py --comfy-root E:\ComfyUI_portable\ComfyUI
 ```
 
-검증기는 다섯 Melona 노드, 이전 분리형 폴더 충돌과 얼굴 검출 모델을 확인합니다. FaceRefine 같은 선택형 외부 노드는 검사 대상이 아닙니다.
+검증기는 네 Melona 노드, 이전 분리형 폴더 충돌과 얼굴 검출 모델을 확인합니다. FaceRefine 같은 선택형 외부 노드는 검사 대상이 아닙니다.
 
 ## 문제 해결
 
