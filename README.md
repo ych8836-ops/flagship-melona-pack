@@ -53,19 +53,6 @@ Premiere Pro와 CapCut 등에서 사용하는 `.cube` LUT를 ComfyUI `IMAGE` 프
 
 영상 전체의 색감을 통일하려면 장면별 생성 단계가 아니라 최종 조립·인코딩 직전에 연결하는 것을 권장합니다.
 
-### `[Melona] LUT Video Save`
-
-LUT 적용과 FFmpeg 영상 저장을 한 번에 수행하는 선택형 출력 노드입니다.
-
-- H.264 고화질
-- H.264 RGB 무손실
-- ProRes 4444
-- FFV1 무손실
-- 선택적 오디오 결합
-- 노드 내부 영상 프리뷰와 기본 재생 컨트롤
-
-프레임과 오디오를 한 번에 파일로 저장하고 싶을 때 사용하는 독립형 출력 노드입니다. `h264_high`는 브라우저에서 직접 재생하며, 브라우저가 지원하지 않는 ProRes·FFV1·일부 MKV는 VideoHelperSuite가 설치돼 있으면 프리뷰용으로 자동 변환해 표시합니다.
-
 ## 설치
 
 ### Git으로 설치
@@ -131,7 +118,7 @@ comfyui_lut_video_exporter
 - `H3FacePresence`: `ultralytics`
 - `ColorMatchLABChunked`: `torch`, `kornia`
 - `H3DynamicResonanceSuppressor`: `torch`, `torchaudio`
-- LUT 노드: `torch`; 영상 저장 기능은 FFmpeg 필요
+- LUT 노드: `torch`
 
 ## 선택형 연동 노드
 

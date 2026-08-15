@@ -13,10 +13,6 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "ColorMatchLABChunked": "[Melona] Color Match LAB — VRAM Safe",
     "H3DynamicResonanceSuppressor": "[Melona] H3 Dynamic Resonance Suppressor",
     "ApplyLUTToVideoFrames": "[Melona] Apply LUT to Video Frames",
-    "LUTVideoSave": "[Melona] LUT Video Save",
 }
 
-WEB_DIRECTORY = "./web/js"
-
-__all__ = ["NODE_CLASS_MAPPINGS", "NODE_DISPLAY_NAME_MAPPINGS", "WEB_DIRECTORY"]
-
+__all__ = ["NODE_CLASS_MAPPINGS", "NODE_DISPLAY_NAME_MAPPINGS"]

@@ -10,7 +10,6 @@ MELONA_NODES = [
     "ColorMatchLABChunked",
     "H3DynamicResonanceSuppressor",
     "ApplyLUTToVideoFrames",
-    "LUTVideoSave",
 ]
 
 def load_pack(custom_nodes, folder):
